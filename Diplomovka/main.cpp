@@ -95,23 +95,27 @@ int main(int, char) {
 		eyesCascade.detectMultiScale(lMat, eyesUnfiltered, 1.05, 2, CV_HAAR_SCALE_IMAGE, Size(30, 30));
 		if (eyesUnfiltered.size() > 0) {
 			Rect lEye = getLargestRect(eyesUnfiltered);
-			lEye.x += lEyeROI.x - 0.05 * lEyeROI.width;
-			lEye.y += lEyeROI.y + 0.125 * lEyeROI.width;
-			lEye.width /= 2.5;
-			lEye.height /= 2;
 
 			
-			rectangle(frame, lEye, Scalar(255, 0, 0), 2);
+			lEye.x += lEyeROI.x - 0.05 * lEyeROI.width;
+			lEye.y += lEyeROI.y + 0.125 * lEyeROI.width;
+			
+			lEye.width /= 2.5;
+			lEye.height /= 2;
+			
+			
+			rectangle(frame, lEye, Scalar(255, 0, 80), 2);
 			Mat im = Mat(gray, lEye);
 			//imwrite("../left_eye.png", im);
 			vector<Point2f> features;
 			GaussianBlur(im, im, Size(3, 3), 1.5, 1.5);
-			goodFeaturesToTrack(im, features, 1, .5, 1.1);
+			goodFeaturesToTrack(im, features, 4, .5, lEye.width/4);
 			RNG rng(12345);
 			for (int i = 0; i < features.size(); i++)
 			{
-				circle(frame, features[i] + Point2f(lEye.x, lEye.y), 4, Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
-					rng.uniform(0, 255)), -1, 8, 0);
+				//circle(frame, features[i] + Point2f(lEye.x, lEye.y), 4, Scalar(rng.uniform(0, 255), rng.uniform(0, 255),
+				//	rng.uniform(0, 255)), -1, 8, 0);
+				circle(frame, features[i] + Point2f(lEye.x, lEye.y), 4, Scalar(0,255,0), -1, 8, 0);
 			}
 			
 		}
