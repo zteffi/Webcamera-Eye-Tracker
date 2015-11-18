@@ -20,34 +20,60 @@ bool DEBUG_MODE = true;
 Rect getLargestRect(vector<Rect> v);
 
 
+
 int main(int, char) {
-	VideoCapture cap(0);
-
-
-	// Open the default camera
-	if (!cap.isOpened()) {
-		printf("--(!)Camera 0 not available\n"); return -2;
-	}
-	
-	Mat equalizedGray;
+	long frameCount = 34; //skip glasses guy
 	namedWindow(windowName, 1);
-	InputProcessing ip = InputProcessing();
-	CascadeClassifier cc;
-	cc.load("haarcascade_righteye_2splits.xml");
+	InputProcessing ip(InputProcessing::INPUT_TYPE_BIOID_DB);
+	Mat frame, gray;
+	
 	while (true) {
-		Mat frame,  gray;
-		
-		cap >> frame; // get a new frame from camera
+		printf("%i th frame\n", frameCount);
+		frame = ip.getNextFrame(frameCount);
 		gray = ip.getSingleChannelMatrix(frame);
-		Rect & faceROI = ip.getFacePosition(gray);
-		if (faceROI.width == 0) {
+		frameCount++;
+		if (frame.rows == 0) {
+			break;
+		}
+		Rect face = ip.getFacePosition(frame);
+		if (face.width == 0) {
 			if (waitKey(30) == 27)
 				break;
+			imshow(windowName, frame);
 			continue;
 		}
 		if (DEBUG_MODE) {
-			rectangle(frame, faceROI, Scalar(45, 200, 200, 100));
+			rectangle(frame, face, Scalar(45, 200, 200, 100));
 		}
+
+		Rect leftEye = ip.getLeftEyePosition(frame, face);
+		Rect rightEye = ip.getRightEyePosition(frame, face);
+
+		if (DEBUG_MODE) {
+			rectangle(frame, leftEye, Scalar(45, 45, 200, 100));
+			rectangle(frame, rightEye, Scalar(200, 200, 45, 100));
+		}
+
+		Mat im = Mat(ip.getSingleChannelMatrix(frame), leftEye);
+	
+		vector<Point2f> features;
+	//	GaussianBlur(im, im, Size(3, 3), 0, 0);
+		goodFeaturesToTrack(im, features, 24, .15, 1.1);
+		RNG rng(12345);
+		if (DEBUG_MODE) {
+			for (int i = 0; i < features.size(); i++)
+			{
+				circle(frame, features[i] + Point2f(leftEye.x, leftEye.y), 1, Scalar(10,255,255), -1, 8, 0);
+			}
+		}
+		Mat_<double> gray2 = Mat(gray);
+		Mat_<double> eyeCorner;
+		Mat kernel = (Mat_<int>(3, 3) <<
+			1, 0, 0,
+			1, -3, 0,
+			0, 1, 0);
+		filter2D(gray2, eyeCorner, -1, kernel);
+
 	/*
 		/** Find eyes
 		// shrink Regions of interest (ROI), in which eyes are detected
@@ -108,7 +134,7 @@ int main(int, char) {
 		//GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
 		//Canny(edges, edges, 0, 30, 3);
 		imshow(windowName, frame);
-		if (waitKey(30) == 27)
+		if (waitKey(7) == 27)
 			break;
 	}
 	// the camera will be deinitialized automatically in VideoCapture destructor
