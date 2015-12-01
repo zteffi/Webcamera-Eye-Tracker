@@ -1,7 +1,7 @@
 #include "opencv2/opencv.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-
+#include <opencv2/features2d.hpp>
 #include "inputprocessing.h"
 
 #include <iostream>
@@ -14,28 +14,34 @@ using namespace std;
 
 String windowName = "Demo";
 bool DEBUG_MODE = true;
+double alpha;
+const int alpha_slider_max = 100;
+int alpha_slider = 0;
 
 
 /** Function variables */
 Rect getLargestRect(vector<Rect> v);
 
 
+void onTrackbar(int, void*) {
+	alpha = 10*(double)alpha_slider / (double)alpha_slider_max;
+}
 
 int main(int, char) {
 	long frameCount = 34; //skip glasses guy
 	namedWindow(windowName, 1);
-	InputProcessing ip(InputProcessing::INPUT_TYPE_BIOID_DB);
-	Mat frame, gray;
+	InputProcessing ip(InputProcessing::INPUT_TYPE_CAMERA_INPUT);
+	Mat frame, gray, red;
 	
 	while (true) {
-		printf("%i th frame\n", frameCount);
 		frame = ip.getNextFrame(frameCount);
-		gray = ip.getSingleChannelMatrix(frame);
+		red = ip.getSingleChannelMatrix(frame);
+		cvtColor(frame, gray, CV_BGR2GRAY);
 		frameCount++;
 		if (frame.rows == 0) {
 			break;
 		}
-		Rect face = ip.getFacePosition(frame);
+		Rect face = ip.getFacePosition(gray);
 		if (face.width == 0) {
 			if (waitKey(30) == 27)
 				break;
@@ -46,33 +52,48 @@ int main(int, char) {
 			rectangle(frame, face, Scalar(45, 200, 200, 100));
 		}
 
-		Rect leftEye = ip.getLeftEyePosition(frame, face);
-		Rect rightEye = ip.getRightEyePosition(frame, face);
+		Rect leftEye = ip.getLeftEyePosition(gray, face);
+		leftEye.width/= 2;
+		Rect rightEye = ip.getRightEyePosition(gray, face);
+		rightEye.width /= 2;
+		rightEye.x += rightEye.width;
 
 		if (DEBUG_MODE) {
 			rectangle(frame, leftEye, Scalar(45, 45, 200, 100));
 			rectangle(frame, rightEye, Scalar(200, 200, 45, 100));
 		}
 
-		Mat im = Mat(ip.getSingleChannelMatrix(frame), leftEye);
-	
+		Mat im = Mat(red, leftEye);
+
 		vector<Point2f> features;
 	//	GaussianBlur(im, im, Size(3, 3), 0, 0);
-		goodFeaturesToTrack(im, features, 24, .15, 1.1);
-		RNG rng(12345);
+		goodFeaturesToTrack(im, features, 8, .35, leftEye.height/16);
+		
+	
 		if (DEBUG_MODE) {
 			for (int i = 0; i < features.size(); i++)
 			{
-				circle(frame, features[i] + Point2f(leftEye.x, leftEye.y), 1, Scalar(10,255,255), -1, 8, 0);
+				 circle(frame, features[i] + Point2f(leftEye.x, leftEye.y), 1, Scalar(10,255,10), -1, 8, 0);
 			}
 		}
-		Mat_<double> gray2 = Mat(gray);
-		Mat_<double> eyeCorner;
-		Mat kernel = (Mat_<int>(3, 3) <<
-			1, 0, 0,
-			1, -3, 0,
-			0, 1, 0);
-		filter2D(gray2, eyeCorner, -1, kernel);
+		int maxVal = INT_MIN, maxIndex = -1, i = 0;
+		Point2f s(leftEye.width / 2, leftEye.height / 2);
+		
+		for (Point2f p : features) {
+			int val = red.at<uchar>(p) - gray.at<uchar>(p);
+			double dist = norm(Mat(p), Mat(s))/ norm(Mat(s));
+			printf("%i - %f\n", val, dist);
+			val -= alpha * dist;
+			
+			if (val > maxVal) {
+				maxVal = val;
+				maxIndex = i;
+			}
+			i++;
+		}
+		if (DEBUG_MODE && maxIndex >= 0) {
+				circle(frame, features[maxIndex] + Point2f(leftEye.x, leftEye.y), 3, Scalar(10, 10, 255), -1, 8, 0);
+		}
 
 	/*
 		/** Find eyes
@@ -133,6 +154,9 @@ int main(int, char) {
 
 		//GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
 		//Canny(edges, edges, 0, 30, 3);
+		
+		createTrackbar("LengthValue", windowName, &alpha_slider, alpha_slider_max, onTrackbar);
+
 		imshow(windowName, frame);
 		if (waitKey(7) == 27)
 			break;
@@ -140,6 +164,7 @@ int main(int, char) {
 	// the camera will be deinitialized automatically in VideoCapture destructor
 	return 0;
 }
+
 
 Rect getLargestRect(vector<Rect> v) {
 	Rect r = v[0];

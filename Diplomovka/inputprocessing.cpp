@@ -1,8 +1,6 @@
 
 
-#include "opencv2/opencv.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
+
 
 #include <iostream>
 #include <stdio.h>
@@ -75,7 +73,7 @@ Mat InputProcessing::getNextFrame(long frameNum) {
 
 Mat InputProcessing::getSingleChannelMatrix(const Mat  frame) {
 	if (frame.channels() == 1) {
-		return frame;
+		return frame.clone();
 	}
 	else if (frame.channels() == 3) {
 		Mat channel[3];
@@ -104,9 +102,9 @@ Rect InputProcessing::getFacePosition(const Mat  frame) {
 Rect InputProcessing::getRightEyePosition(Mat frame, Rect facePosition) {
 	vector<Rect> eyes(1);
 	Rect rightEyeRect = Rect(facePosition.x + facePosition.width/8,
-		facePosition.y + facePosition.height/4, 
+		facePosition.y + 5*facePosition.height/16, 
 		3*facePosition.width/8,
-		facePosition.height/4);
+		3*facePosition.height/16);
 	return rightEyeRect;
 }
 
@@ -114,9 +112,14 @@ Rect InputProcessing::getLeftEyePosition(Mat frame, Rect facePosition) {
 	vector<Rect> eyes(1);
 	Rect leftEyeRect = Rect(facePosition.x + facePosition.width / 2,
 		facePosition.y + 5 *facePosition.height /16,
-		2 * facePosition.width / 8,
-		facePosition.height / 8);
+		3 * facePosition.width / 8,
+		3*facePosition.height / 16);
 	return leftEyeRect;
+}
+
+Ptr<Feature2D> InputProcessing::getFeaturesUnfiltered(Mat frame) {
+	Ptr<Feature2D> detector;
+	return detector;
 }
 
 

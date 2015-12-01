@@ -4,7 +4,10 @@
 
 #include <iostream>
 #include <stdio.h>
-
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d.hpp>
 using namespace cv;
 using namespace std;
 
@@ -38,6 +41,8 @@ public:
 
 	/* returns area of user's left eye */
 	Rect getLeftEyePosition(Mat frame, Rect facePosition);
+
+	Ptr<Feature2D> getFeaturesUnfiltered(Mat frame);
 
 	/* if input is live video stream, specifie camera number */
 	void setCamera(int deviceNum);
