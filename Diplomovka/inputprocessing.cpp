@@ -103,7 +103,7 @@ Mat InputProcessing::getNextFrame(unsigned long frameNum) {
 		break;
 	case INPUT_TYPE_BIOID_DB:
 		//show for 700 ms
-		if (waitKey(700) == 27) { exit(0); }
+		//if (waitKey(700) == 27) { exit(0); }
 		// when we used all photos in db, return empty matrix
 		if (frameNum < 340) {
 			frame = imread("../BioID-FaceDatabase-V1.2/BioID_" + to_string(frameNum + 1181) + ".pgm");
@@ -174,6 +174,8 @@ Rect InputProcessing::getLeftEyePosition(Mat frame, Rect facePosition) {
 	}
 	eyes.at(0).x += facePosition.x;
 	eyes.at(0).y += facePosition.y;
+	//from empirical observations, cascades tend to crop right parts for both eyes, so we add width
+	eyes.at(0).width += ceil(eyes.at(0).width *.125);
 	return eyes.at(0);
 }
 
@@ -189,7 +191,8 @@ Rect InputProcessing::getRightEyePosition(Mat frame, Rect facePosition) {
 	}
 	eyes.at(0).x += facePosition.x;
 	eyes.at(0).y += facePosition.y;
-	eyes.at(0).width += ceil(eyes.at(0).width *.25);
+	//from empirical observations, cascades tend to crop right parts for both eyes, so we add width
+	eyes.at(0).width += ceil(eyes.at(0).width *.125);
 	return eyes.at(0);
 }
 
@@ -213,7 +216,7 @@ Point2i InputProcessing::getLeftEyeCorner(Mat gray, Rect leftEye, Mat drawFrame)
 	for (Point2i p : features) {
 		//ydist = distnace from middle of inner edge of leftEye rectangle
 		double ydist = (p.y - (leftEye.height / 4));
-		double dist = p.x * p.x + ydist * ydist*2;
+		double dist = p.x * p.x + ydist * ydist*3;
 		// y difference is less likely for eye corner
 		if (dist < minDist) {
 			minDist = dist;
@@ -252,7 +255,7 @@ Point2i InputProcessing::getRightEyeCorner(Mat gray, Rect rightEye, Mat drawFram
 		//ydist = distnace from middle of inner edge of leftEye rectangle
 		double ydist = (p.y - (rightEye.height / 4));
 		double xdist = (p.x - (rightEye.width / 2));
-		double dist = xdist * xdist + ydist * ydist * 2;
+		double dist = xdist * xdist + ydist * ydist * 3;
 
 		if (dist < minDist) {
 			minDist = dist;
@@ -271,6 +274,8 @@ Point2i InputProcessing::getRightEyeCorner(Mat gray, Rect rightEye, Mat drawFram
 
 	return Point2i(-1, -1);
 }
+
+
 
 Point InputProcessing::getGroundTruth(int frameCount, int flag) {
 	if (inputType != INPUT_TYPE_GI4E_DB) {

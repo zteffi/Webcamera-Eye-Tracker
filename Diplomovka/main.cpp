@@ -5,6 +5,7 @@
 #include <windows.h> //for GetTickCount 
 #include <iostream>
 #include <stdio.h>
+#include <string>
 
 #include "inputprocessing.h"
 
@@ -29,7 +30,7 @@ int main(int, char) {
 	int successCount = 0;
 	int cornerNotInROI = 0;
 
-	unsigned long frameCount = 16;//12; 
+	unsigned long frameCount = 0; 
 	namedWindow(windowName, 1);
 	InputProcessing ip(INPUT_TYPE, DEBUG_MODE);
 	Mat frame, gray, red;
@@ -37,9 +38,20 @@ int main(int, char) {
 	// stopwatch
 	SYSTEMTIME time;
 	WORD tic, toc;
+
+	ofstream csv;
+	csv.open("results_our_3y.csv");
+	csv << "test #1" << ";\n";
+	csv << "left outer error; left center error; left inner error; right inner error;right center error; right outer error;\n";
 	
 	while (true) {
+		
 		frame = ip.getNextFrame(frameCount);
+		 unsigned int pnum = frameCount / 12 + 1;
+		unsigned int fnum = frameCount % 12 + 1;
+		csv << setw(3) << setfill('0') << pnum << "_"
+			<< setw(2) << setfill('0') << fnum << ".png" << ";";
+		
 		if (frame.rows == 0) {
 			break;
 		}
@@ -55,6 +67,7 @@ int main(int, char) {
 			if (waitKey(30) == 27)
 				break;
 			imshow(windowName, frame);
+			csv << '\n';
 			continue;
 		}
 		if (DEBUG_MODE) {
@@ -64,6 +77,7 @@ int main(int, char) {
 		Rect leftEye = ip.getLeftEyePosition(gray, face);
 		Rect rightEye = ip.getRightEyePosition(gray, face);
 		if (leftEye.width == 0 || rightEye.width == 0) {
+			csv << '\n';
 			continue;
 		}
 		
@@ -73,68 +87,84 @@ int main(int, char) {
 			rectangle(frame, rightEye, Scalar(200, 200, 45, 100));
 		}
 
-		Point2i leftEyeCorner = ip.getLeftEyeCorner(red, leftEye, frame);
-		Point2i rightEyeCorner = ip.getRightEyeCorner(red, rightEye, frame);
-		if (leftEyeCorner.x == -1 || rightEyeCorner.x == -1)
+		Point2i leftEyeInnerCorner = ip.getLeftEyeCorner(red, leftEye, frame);
+		Point2i rightEyeInnerCorner = ip.getRightEyeCorner(red, rightEye, frame);
+		Point2i leftEyeOuterCorner = ip.getRightEyeCorner(red, leftEye, frame);
+		Point2i rightEyeOuterCorner = ip.getLeftEyeCorner(red, rightEye, frame);
+		if (leftEyeInnerCorner.x == -1 || rightEyeInnerCorner.x == -1) {
+			csv << '\n';
+			continue;			
+		}
+			
+		if (leftEyeOuterCorner.x == -1 || rightEyeOuterCorner.x == -1) {
+			csv << '\n';
 			continue;
-
-		circle(frame, leftEyeCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
-		circle(frame, rightEyeCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
+		}
+		circle(frame, leftEyeInnerCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, rightEyeInnerCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, leftEyeOuterCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, rightEyeOuterCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
 	
 		
 		GetSystemTime(&time);
 		tic = (time.wSecond * 1000) + time.wMilliseconds;
-		Point lcenter = ip.timm2011accurate(red, leftEye);
+		Point leftCenter = ip.timm2011accurate(red, leftEye);
 		GetSystemTime(&time);
 		toc = (time.wSecond * 1000) + time.wMilliseconds;
 
 		int timm2011TimeMilis = toc - tic;
 
-		Point rcenter = ip.timm2011accurate(red, rightEye);
+		Point rightCenter = ip.timm2011accurate(red, rightEye);
 
-		circle(frame, lcenter, 2, Scalar(255, 10, 255), -1, 8, 0);
-		circle(frame, rcenter, 2, Scalar(255, 10, 255), -1, 8, 0);
+		circle(frame, leftCenter, 2, Scalar(255, 10, 255), -1, 8, 0);
+		circle(frame, rightCenter, 2, Scalar(255, 10, 255), -1, 8, 0);
 
 		GetSystemTime(&time);
 		tic = (time.wSecond * 1000) + time.wMilliseconds;
-		Point lcenter2 = ip.getEyeCenter(red, leftEye);
+		Point leftCenter2 = ip.getEyeCenter(red, leftEye);
 		GetSystemTime(&time);
 		toc = (time.wSecond * 1000) + time.wMilliseconds;
 
 		int ourTimeMilis = toc - tic;
 
 
-		Point rcenter2 = ip.getEyeCenter(red, rightEye);
+		Point rightCenter2 = ip.getEyeCenter(red, rightEye);
 
-		circle(frame, lcenter2, 2, Scalar(20, 210, 21), -1, 8, 0);
-		circle(frame, rcenter2, 2, Scalar(20, 210, 21), -1, 8, 0);
+		circle(frame, leftCenter2, 2, Scalar(20, 210, 21), -1, 8, 0);
+		circle(frame, rightCenter2, 2, Scalar(20, 210, 21), -1, 8, 0);
 	
 		Point groundTruth = ip.getGroundTruth(frameCount, ip.GROUND_TRUTH_LEFT_CENTER);
-		double timm2011Dist = norm(Mat(groundTruth), Mat(lcenter));
-		double ourDist = norm(Mat(groundTruth), Mat(lcenter2));
+		double timm2011Dist = norm(Mat(groundTruth), Mat(leftCenter));
+		double ourDist = norm(Mat(groundTruth), Mat(leftCenter2));
 
-		printf("timm: %dms %fpx \t our: %dms %fpx \n", timm2011TimeMilis, timm2011Dist, ourTimeMilis, ourDist);
+		std::printf("timm: %dms %fpx \t our: %dms %fpx \n", timm2011TimeMilis, timm2011Dist, ourTimeMilis, ourDist);
 
-		//left eye corner error
-		float lICError = norm(leftEyeCorner - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_INNER_CORNER));
-		float lCError = norm(lcenter - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_CENTER));
 
-		if (lICError > errThresh) {
-			liceCount++;
-			if (!leftEye.contains(ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_INNER_CORNER))) {
-				cornerNotInROI++;
-			}
-		}
-		if (lCError > errThresh) {
-			lceCount++;
-		}
-		successCount++;
+		//fill errors in csv
+		float err = 0.0;
+		err = norm(leftEyeOuterCorner - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_OUTER_CORNER));
+		csv << err << ';';
+		err = norm(leftCenter2 - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_CENTER));
+		csv << err << ';';
+		err = norm(leftEyeInnerCorner - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_INNER_CORNER));
+		csv << err << ';';
+		err = norm(rightEyeInnerCorner - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_RIGHT_INNER_CORNER));
+		csv << err << ';';
+		err = norm(rightCenter2 - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_RIGHT_CENTER));
+		csv << err << ';';
+		err = norm(rightEyeOuterCorner - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_RIGHT_OUTER_CORNER));
+		csv << err << ';';
+
+		
 		imshow(windowName, frame);
 		if (waitKey(1) == 27)
 			break;
+		csv << "\n";
 	}
 	// the camera will be deinitialized automatically in VideoCapture destructor
-	printf("Succeses: %d\tErrors: LEC: %d\tLEIC %d\t CornerNotInRoi %d \n", successCount, lceCount, liceCount, cornerNotInROI);
+
+	//close csv file
+	csv.close();
 	
 	return 0;
 }
