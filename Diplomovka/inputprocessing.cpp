@@ -102,8 +102,6 @@ Mat InputProcessing::getNextFrame(unsigned long frameNum) {
 		cap >> frame; //get next frame from camera/video
 		break;
 	case INPUT_TYPE_BIOID_DB:
-		//show for 700 ms
-		//if (waitKey(700) == 27) { exit(0); }
 		// when we used all photos in db, return empty matrix
 		if (frameNum < 340) {
 			frame = imread("../BioID-FaceDatabase-V1.2/BioID_" + to_string(frameNum + 1181) + ".pgm");
@@ -111,8 +109,6 @@ Mat InputProcessing::getNextFrame(unsigned long frameNum) {
 		break;
 	case INPUT_TYPE_GI4E_DB:
 	{
-		//show for 700 ms
-		//if (waitKey(700) == 27) { exit(0); }
 		unsigned int personCount = frameNum / 12 + 1;
 		unsigned int frameCount = frameNum % 12 + 1;
 		// when we used all photos in db, return empty matrix
@@ -161,8 +157,8 @@ Rect InputProcessing::getFacePosition(const Mat  frame) {
 }
 
 Rect InputProcessing::getLeftEyePosition(Mat frame, Rect facePosition) {
-	Size min(facePosition.width*.15, facePosition.width*.15);
-	Size max(facePosition.width*.4, facePosition.width*.4);
+	Size min((int)facePosition.width*.15f, (int)facePosition.width*.15f);
+	Size max((int)facePosition.width*.4f, (int)facePosition.width*.4f);
 	vector<Rect> eyes(1);
 	facePosition.width /= 2;
 	facePosition.height /= 2;
@@ -216,7 +212,7 @@ Point2i InputProcessing::getLeftEyeCorner(Mat gray, Rect leftEye, Mat drawFrame)
 	for (Point2i p : features) {
 		//ydist = distnace from middle of inner edge of leftEye rectangle
 		double ydist = (p.y - (leftEye.height / 4));
-		double dist = p.x * p.x + ydist * ydist*3;
+		double dist = p.x * p.x + ydist * ydist * 4;
 		// y difference is less likely for eye corner
 		if (dist < minDist) {
 			minDist = dist;
@@ -255,7 +251,7 @@ Point2i InputProcessing::getRightEyeCorner(Mat gray, Rect rightEye, Mat drawFram
 		//ydist = distnace from middle of inner edge of leftEye rectangle
 		double ydist = (p.y - (rightEye.height / 4));
 		double xdist = (p.x - (rightEye.width / 2));
-		double dist = xdist * xdist + ydist * ydist * 3;
+		double dist = xdist * xdist + ydist * ydist * 4;
 
 		if (dist < minDist) {
 			minDist = dist;
@@ -428,35 +424,41 @@ float getFunctionResponseForCenter(Mat gx, Mat gy, Point c) {
 	float res = 0;
 	int ROIsize = (gx.rows * gx.cols);
 	float * px, *py;
-	for (int i = 0; i < gx.rows; i++) {
-		px = gx.ptr<float>(i);
-		py = gy.ptr<float>(i);
-		for (int j = 0; j < gx.cols; j++) {
-			float plen = sqrtf(px[j] * px[j] + py[j] * py[j]);
-			
+	try{
+		for (int i = 0; i < gx.rows; i++) {
+			px = gx.ptr<float>(i);
+			py = gy.ptr<float>(i);
+			for (int j = 0; j < gx.cols; j++) {
+				float plen = sqrtf(px[j] * px[j] + py[j] * py[j]);
 
-			if (plen < 300) {
-				continue;
-			}
-			//d^T.x, d^T.y where d is vector from c to origin of g
-			double dxt = i - c.x;
-			double dyt = j - c.y;
 
-			double dlen = sqrt(dxt*dxt + dyt*dyt);
-			if (dlen == 0) {
-				continue;
+				if (plen < 300) {
+					continue;
+				}
+				//d^T.x, d^T.y where d is vector from c to origin of g
+				double dxt = i - c.x;
+				double dyt = j - c.y;
+
+				double dlen = sqrt(dxt*dxt + dyt*dyt);
+				if (dlen == 0) {
+					continue;
+				}
+				double cz = px[j] * dyt / dlen - py[j] * dxt / dlen; //cross product
+				cz /= ROIsize;
+				res += cz*cz;
+
 			}
-			double cz = px[j] * dyt / dlen - py[j] * dxt / dlen; //cross product
-			cz /= ROIsize;
-			res += cz*cz;
 
 		}
+	}
+	catch (int e) {
+		cout << e << '\n';
 
 	}
 	return res;
 }
 
-Point2f InputProcessing::getEyeCenter(Mat frame, Rect eye) {
+Point2f InputProcessing::getEyeCenter(Mat frame, Rect eye, unsigned int stepCount, float gamma) {
 	//find derivatives
 	Mat ROI = frame(eye);
 	Mat gx, gy;
@@ -467,19 +469,17 @@ Point2f InputProcessing::getEyeCenter(Mat frame, Rect eye) {
 	Point2f c = getPupilPointFromIntensity(ROI, 2);
 	Point cc = c;
 
-	Point2f c2 = getPupilPointFromGradient(gx);
 
 	//use gradient descend to improve result
 	Point gradient; // gradient vector
-	for (int step = 0; step < 126; step++) {
-		const float gama = .05;
+	for (int step = 0; step < stepCount; step++) {
 
 		// gradients for border points of c
 		float x1, x2, y1, y2;
-		x1 = c.x - .1;
-		x2 = c.x + .1;
-		y1 = c.y - .1;
-		y2 = c.y + .1;
+		x1 = c.x - .5;
+		x2 = c.x + .5;
+		y1 = c.y - .5;
+		y2 = c.y + .5;
 		
 
 		float vx1 = getFunctionResponseForCenter(gx, gy, Point(x1, c.y));
@@ -490,8 +490,8 @@ Point2f InputProcessing::getEyeCenter(Mat frame, Rect eye) {
 		float kx = vx2 - vx1;
 		float ky = vy2 - vy1;
 	
-		c.x += kx * gama;
-		c.y += ky * gama;
+		c.x += -kx * gamma;
+		c.y += -ky * gamma;
 		
 		
 	}
@@ -499,6 +499,20 @@ Point2f InputProcessing::getEyeCenter(Mat frame, Rect eye) {
 	c.x += eye.x;
 	c.y += eye.y;
 	return c;
+}
+
+Point2f InputProcessing::getEyeCenter(Mat frame, Point leftCorner, Point rightCorner) {
+	if (leftCorner.x > rightCorner.x) {
+		printf("--(!)Error in getEyeCenter function; leftCorner is on the right\n");
+		exit(322);
+	}
+	uint width = rightCorner.x - leftCorner.x;
+	uint y = min(leftCorner.y, rightCorner.y) - width * .5;
+
+	Rect roi(leftCorner.x, y, width, width );
+	//TODO allow non square roi
+	return getEyeCenter(frame, roi);
+		
 }
 
 /* if input is live video stream, specifie camera number */

@@ -73,7 +73,10 @@ public:
 
 
 	/* tim2012accurate with gradient descend */
-	Point2f getEyeCenter(Mat frame, Rect eye);
+	Point2f getEyeCenter(Mat frame, Rect eye, unsigned int stepCount = 200, float gamma = .1);
+
+	/* same, but with eye corners as ROI boundries */
+	Point2f getEyeCenter(Mat frame, Point leftCorner, Point rightCorner);
 
 	/* returns minimal intensity in 4-neighbourhood as pupil center, used as a starting point for getEyeCenter */
 	Point getPupilPointFromIntensity(Mat ROI, float shrinkFactor);

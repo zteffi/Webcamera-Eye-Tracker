@@ -12,7 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="inputprocessing.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="eyetracker.cpp" />
+    <ClCompile Include="testing.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inputprocessing.h" />
