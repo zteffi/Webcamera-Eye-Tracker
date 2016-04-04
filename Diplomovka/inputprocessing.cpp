@@ -8,6 +8,7 @@ InputProcessing::InputProcessing(int inputType, bool DEBUG_MODE) :
 	eyeCascade(CascadeClassifier())
 
 {
+	
 	printf("loading \n");
 	if (!faceCascade.load("haarcascade_frontalface_alt.xml")) {
 		printf("--(!)File not found faceCascade\n"); exit(-11);
@@ -313,6 +314,7 @@ Point InputProcessing::timm2011accurate(Mat frame, Rect eye) {
 			py[j] /= plen;
 
 			double dxt, dyt = 0; //d^T.x, d^T.y where d is vector from c to origin of g
+			//tested for best performance
 			if (plen < 300) {
 				continue;
 			}
@@ -352,6 +354,81 @@ Point InputProcessing::timm2011accurate(Mat frame, Rect eye) {
 	return cmaxPoint;
 }
 
+
+
+Point InputProcessing::timm2011accurateTest(Mat frame, Rect eye) {
+	//find derivatives
+	Mat ROI = frame(eye);
+	Mat gx, gy;
+	GaussianBlur(ROI, ROI, Size(3, 3), 0, 0);
+	Scharr(ROI, gx, CV_32F, 1, 0);
+	Scharr(ROI, gy, CV_32F, 0, 1);
+
+	//initialize variables
+	Point cmaxPoint;
+	double cmax = DBL_MIN;
+	double c = 0;
+	Mat cmap(gx.size(), CV_64FC1, Scalar(0));
+
+	//compute cmap field
+	float * px, *py;
+	unsigned char * w;
+	double * pc;
+
+	//for each vector g = gradient with origin at ROI(j,i)
+	for (int i = 0; i < gx.rows; i++) {
+		px = gx.ptr<float>(i);
+		py = gy.ptr<float>(i);
+
+		for (int j = 0; j < gx.cols; j++) {
+			float plen = sqrtf(px[j] * px[j] + py[j] * py[j]);
+			if (plen < 300)
+				continue;
+			px[j] /= plen;
+			py[j] /= plen;
+			if ((abs(px[j]) < abs(py[j]))) {
+				continue;
+			}
+
+			double dxt, dyt = 0; //d^T.x, d^T.y where d is vector from c to origin of g
+			if (plen < 300) {
+				continue;
+			}
+
+			//for each possibl centre c = ROI(l,k)
+			for (int k = 0; k < gx.rows; k++) {
+				dxt = -k + i;
+				pc = cmap.ptr<double>(k);
+				w = ROI.ptr<unsigned char>(k);
+				for (int l = 0; l < gx.cols; l++) {
+					if (i == k && j == l)
+						continue;
+					dyt = l - j;
+					double dlen = sqrt(dxt*dxt + dyt*dyt);
+					double cz = px[j] * dyt / dlen - py[j] * dxt / dlen; //cross product
+					pc[l] += cz*cz * (255 - w[l]); // inverted intensity value, since pupil is usually darker
+
+				}
+			}
+
+
+		}
+
+	}
+	for (int i = 8; i < gx.rows - 8; i++) {
+		pc = cmap.ptr<double>(i);
+
+		for (int j = 8; j < gx.cols - 8; j++) {
+			if (pc[j] > cmax) {
+				cmaxPoint.x = j;
+				cmaxPoint.y = i;
+				cmax = pc[j];
+			}
+		}
+	}
+	cmaxPoint += Point(eye.x, eye.y);
+	return cmaxPoint;
+}
 
 /*
   finds minimal intensity for center 1/9 of ROI after shrinking image width and height by shrinkFactor
@@ -513,6 +590,96 @@ Point2f InputProcessing::getEyeCenter(Mat frame, Point leftCorner, Point rightCo
 	//TODO allow non square roi
 	return getEyeCenter(frame, roi);
 		
+}
+
+bool InputProcessing::saveFeatures(ofstream & file, int x, int y) {
+	
+	Mat frame = getNextFrame(frameCount++);
+	Mat red = getRedChannelMatrix(frame);
+	Mat gray;
+
+	//if we don't have eye features to track, find them 
+	if (corners.size() < 4) {
+		cvtColor(frame, gray, CV_BGR2GRAY);
+
+		//locate face
+		Rect face = getFacePosition(gray);
+
+		if (face.width == 0) {
+			if (waitKey(30) == 27)
+				exit(0);
+			imshow(WINDOW_NAME, frame);
+			return false;
+		}
+
+		Rect leftEye = getLeftEyePosition(gray, face);
+		Rect rightEye = getRightEyePosition(gray, face);
+		if (leftEye.width == 0 || rightEye.width == 0) {
+			return false;
+		}
+
+		corners.push_back(getLeftEyeCorner(red, rightEye, frame));
+		corners.push_back(getRightEyeCorner(red, rightEye, frame));
+		corners.push_back(getLeftEyeCorner(red, leftEye, frame));
+		corners.push_back(getRightEyeCorner(red, leftEye, frame));
+
+
+		if (corners[0].x == -1 || corners[1].x == -1
+			|| corners[2].x == -1 || corners[3].x == -1) {
+			return false;
+		}
+
+	}
+	else {
+		vector<uchar> status(4);
+		vector<float> errors(4);
+		vector<Point> nextCorners(4);
+		try {
+			calcOpticalFlowPyrLK(prevRedFrame, red, corners, nextCorners, status, errors);
+
+		}
+		catch (cv::Exception e) {
+			cout << e.err << "\n";
+			corners.clear();
+			return false;
+		}
+
+		//if not all 4 corners were found
+		if ((status[0] && status[1] && status[2] && status[3]) != 1) {
+			corners.clear();
+			return false;
+		}
+		corners = nextCorners;
+	}
+	Point rightCenter = getEyeCenter(red, corners[0], corners[1]);
+	Point leftCenter = getEyeCenter(red, corners[2], corners[3]);
+	
+
+	if (DEBUG_MODE) {
+		circle(frame, corners[0], 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, corners[1], 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, corners[2], 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, corners[3], 2, Scalar(10, 255, 255), -1, 8, 0);
+		circle(frame, leftCenter, 2, Scalar(20, 210, 21), -1, 8, 0);
+		circle(frame, rightCenter, 2, Scalar(20, 210, 21), -1, 8, 0);
+		imshow(WINDOW_NAME, frame);
+	}
+	
+	file << corners[0] << ';'
+		<< rightCenter << ';'
+		<< corners[1] << ';'
+		<< corners[2] << ';'
+		<< leftCenter << ';'
+		<< corners[3] << ';'
+		<< x << ";"
+		<< y << ";"
+		<< endl;
+
+	prevRedFrame = red;
+}
+
+void InputProcessing::processTrainingFile(ofstream & file) {
+	
 }
 
 /* if input is live video stream, specifie camera number */

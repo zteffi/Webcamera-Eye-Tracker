@@ -36,7 +36,14 @@ public:
 	const int static GROUND_TRUTH_RIGHT_CENTER = 4;
 	const int static GROUND_TRUTH_RIGHT_OUTER_CORNER = 5;
 
+	const string WINDOW_NAME = "debug window";
+
 	vector<vector<Point2f>> labels; // ground truth for features in GI4E db
+
+	Mat prevRedFrame;
+	unsigned long frameCount = 0;
+	vector<Point2i> corners;
+
 
 	bool DEBUG_MODE;
 
@@ -71,6 +78,8 @@ public:
 	*/
 	Point timm2011accurate(Mat frame, Rect eye);
 
+	Point timm2011accurateTest(Mat frame, Rect eye);
+
 
 	/* tim2012accurate with gradient descend */
 	Point2f getEyeCenter(Mat frame, Rect eye, unsigned int stepCount = 200, float gamma = .1);
@@ -80,6 +89,13 @@ public:
 
 	/* returns minimal intensity in 4-neighbourhood as pupil center, used as a starting point for getEyeCenter */
 	Point getPupilPointFromIntensity(Mat ROI, float shrinkFactor);
+
+	/*saves feature positions + gaze coordinates into file
+	returns true if features were found
+	*/
+	bool saveFeatures(ofstream & file, int x, int y);
+
+	void processTrainingFile(ofstream & file);
 
 	/* if input is live video stream, specifie camera number */
 	void setCamera(int deviceNum);

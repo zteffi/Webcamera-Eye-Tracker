@@ -24,9 +24,15 @@
     <ClCompile Include="eyetracker.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="training.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inputprocessing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="training.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
