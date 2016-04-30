@@ -19,7 +19,7 @@ const String windowName = "Feature detection demo (Press Esc to terminate)";
 const bool DEBUG_MODE = true;
 const int INPUT_TYPE = InputProcessing::INPUT_TYPE_GI4E_DB;
 
-int main_(int, char) {
+void test() {
 
 	unsigned long frameCount = 0; 
 	namedWindow(windowName, 1);
@@ -28,14 +28,15 @@ int main_(int, char) {
 
 	// stopwatch
 	SYSTEMTIME time;
-	WORD tic, toc;
+	WORD tic, toc,atic, atoc;
 	ofstream csv;
-	csv.open("..\\test_results\\timm2011_norm_angle_depend.csv");
-	csv << "test #1" << ";\n";
+	csv.open("..\\test_results\\gray_channel.csv");
+	csv << "test #2" << ";\n";
 	csv << "file;left outer error; left center error; left inner error; right inner error;right center error; right outer error;\n";
 
 	while (true) {
-
+		GetSystemTime(&time);
+		atic = (time.wSecond * 1000) + time.wMilliseconds;
 		frame = ip.getNextFrame(frameCount);
 		unsigned int pnum = frameCount / 12 + 1;
 		unsigned int fnum = frameCount % 12 + 1;
@@ -54,6 +55,9 @@ int main_(int, char) {
 
 		frameCount++;
 
+		GetSystemTime(&time);
+		tic = (time.wSecond * 1000) + time.wMilliseconds;
+
 		Rect face = ip.getFacePosition(gray);
 
 		if (face.width == 0) {
@@ -69,6 +73,10 @@ int main_(int, char) {
 
 		Rect leftEye = ip.getLeftEyePosition(gray, face);
 		Rect rightEye = ip.getRightEyePosition(gray, face);
+
+		GetSystemTime(&time);
+		toc = (time.wSecond * 1000) + time.wMilliseconds;
+
 		if (leftEye.width == 0 || rightEye.width == 0) {
 			csv << '\n';
 			continue;
@@ -80,10 +88,10 @@ int main_(int, char) {
 			rectangle(frame, rightEye, Scalar(200, 200, 45, 100));
 		}
 
-		Point2i leftEyeInnerCorner = ip.getLeftEyeCorner(red, leftEye, frame);
-		Point2i rightEyeInnerCorner = ip.getRightEyeCorner(red, rightEye, frame);
-		Point2i leftEyeOuterCorner = ip.getRightEyeCorner(red, leftEye, frame);
-		Point2i rightEyeOuterCorner = ip.getLeftEyeCorner(red, rightEye, frame);
+		Point2i leftEyeInnerCorner = ip.getLeftEyeCorner(gray, leftEye);
+		Point2i rightEyeInnerCorner = ip.getRightEyeCorner(gray, rightEye);
+		Point2i leftEyeOuterCorner = ip.getRightEyeCorner(gray, leftEye);
+		Point2i rightEyeOuterCorner = ip.getLeftEyeCorner(gray, rightEye);
 		if (leftEyeInnerCorner.x == -1 || rightEyeInnerCorner.x == -1) {
 			csv << '\n';
 			continue;
@@ -99,22 +107,17 @@ int main_(int, char) {
 		circle(frame, rightEyeOuterCorner, 2, Scalar(10, 255, 255), -1, 8, 0);
 
 
-		GetSystemTime(&time);
-		tic = (time.wSecond * 1000) + time.wMilliseconds;
-		Point leftCenter = ip.timm2011accurateTest(red, leftEye);
-		GetSystemTime(&time);
-		toc = (time.wSecond * 1000) + time.wMilliseconds;
-		Point rightCenter = ip.timm2011accurateTest(red, rightEye);
+		
+		Point leftCenter = ip.getEyeCenter(red, leftEye);
+		
+
+		Point rightCenter = ip.getEyeCenter(red, rightEye);
 
 		circle(frame, leftCenter, 2, Scalar(255, 10, 255), -1, 8, 0);
 		circle(frame, rightCenter, 2, Scalar(255, 10, 255, 20), -1, 8, 0);
 
-		GetSystemTime(&time);
-		tic = (time.wSecond * 1000) + time.wMilliseconds;
-		GetSystemTime(&time);
-		toc = (time.wSecond * 1000) + time.wMilliseconds;
 
-		int ourTimeMilis = toc - tic;
+
 
 		circle(frame, leftCenter, 2, Scalar(20, 210, 21), -1, 8, 0);
 		circle(frame, rightCenter, 2, Scalar(20, 210, 21), -1, 8, 0);
@@ -127,7 +130,7 @@ int main_(int, char) {
 		std::printf(".");
 
 		//fill errors in csv
-		float err = 0.0;
+		double err = 0.0;
 		err = norm(leftEyeOuterCorner - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_OUTER_CORNER));
 		csv << err << ';';
 		err = norm(leftCenter - ip.getGroundTruth(frameCount - 1, ip.GROUND_TRUTH_LEFT_CENTER));
@@ -148,11 +151,13 @@ int main_(int, char) {
 		csv << "\n";
 
 		// the camera will be deinitialized automatically in VideoCapture destructor
-
+		GetSystemTime(&time);
+		atoc = (time.wSecond * 1000) + time.wMilliseconds;
+		WORD a = atoc - atic;
+		WORD b = toc - tic;
 
 		}
 		//close csv file
 		csv.close();
-	return 0;
 }
 

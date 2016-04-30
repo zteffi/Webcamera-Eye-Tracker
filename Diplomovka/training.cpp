@@ -1,4 +1,6 @@
+
 #include "training.h"
+
 
 void drawFancyTarget(Mat dst, Mat target, Point loc) {
 	int i, j;
@@ -44,14 +46,16 @@ void cleanTarget(Mat dst, Point loc) {
 
 void trainingPhase(InputProcessing ip, Size screenResolution) {
 	Mat bg(screenResolution, CV_8UC(3), Scalar((char)30,30,30));
-	namedWindow("Name", CV_WINDOW_NORMAL);
-	setWindowProperty("Name", CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
+	cv::namedWindow(WINDOW_NAME, CV_WINDOW_NORMAL);
+	setWindowProperty(WINDOW_NAME, CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 	
-	Mat target = imread("target2.png");
+	Mat target = imread("img/target2.png");
+	Mat waitMessage = imread("img/processing.png");
 	Point targetLoc(target.cols, target.rows);
 	ofstream file;
-	file.open("train.csv");
+	file.open("train.data");
 	
+		
 	//snake through training points
 	for (int pointCol = 0; pointCol <= POINT_COLS; pointCol++) {
 		for (int pointRow2 = 0; pointRow2 <= POINT_ROWS; pointRow2++) {
@@ -59,14 +63,14 @@ void trainingPhase(InputProcessing ip, Size screenResolution) {
 			int pointRow = (pointCol % 2 == 0) ? pointRow2 : (POINT_ROWS - pointRow2);
 			targetLoc.y = 32 + pointRow * (screenResolution.height -64)/ POINT_ROWS;
 			drawFancyTarget(bg, target, targetLoc);
-			imshow("Name", bg);
+			cv::imshow(WINDOW_NAME, bg);
 			//wait for user to look at the point
-			if (waitKey(50) == 27) {
+			if (waitKey(80) == 27) {
 				exit(0);
 			}
 			int counter = 0;
-			while (counter < MIN_FRAMES) {
-				if (ip.saveFeatures(file, targetLoc.x, targetLoc.y)) {
+			while (counter < FRAME_COUNT) {
+				if (ip.saveFeatures(file, targetLoc.x, targetLoc.y, screenResolution)) {
 					counter++;
 				}
 				//user can cancel
@@ -80,5 +84,8 @@ void trainingPhase(InputProcessing ip, Size screenResolution) {
 		targetLoc.x += (screenResolution.width - 50) / POINT_COLS;
 	}
 	file.close();
-	ip.processTrainingFile(file);
+	string messageName = "Message";
+	cv::namedWindow(messageName, CV_WINDOW_NORMAL);
+	cv::imshow(messageName, waitMessage);
+	destroyWindow(messageName);
 }
