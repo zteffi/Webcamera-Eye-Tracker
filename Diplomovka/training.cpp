@@ -50,7 +50,6 @@ void trainingPhase(InputProcessing ip, Size screenResolution) {
 	setWindowProperty(WINDOW_NAME, CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
 	
 	Mat target = imread("img/target2.png");
-	Mat waitMessage = imread("img/processing.png");
 	Point targetLoc(target.cols, target.rows);
 	ofstream file;
 	file.open("train.data");
@@ -70,12 +69,13 @@ void trainingPhase(InputProcessing ip, Size screenResolution) {
 			}
 			int counter = 0;
 			while (counter < FRAME_COUNT) {
-				if (ip.saveFeatures(file, targetLoc.x, targetLoc.y, screenResolution)) {
+				if (ip.saveMeasures(file, targetLoc.x, targetLoc.y, screenResolution)) {
 					counter++;
 				}
 				//user can cancel
 				if (waitKey(20) == 27) {
-					exit(0);
+					file.close();
+					return;
 				}
 			}
 
@@ -84,8 +84,4 @@ void trainingPhase(InputProcessing ip, Size screenResolution) {
 		targetLoc.x += (screenResolution.width - 50) / POINT_COLS;
 	}
 	file.close();
-	string messageName = "Message";
-	cv::namedWindow(messageName, CV_WINDOW_NORMAL);
-	cv::imshow(messageName, waitMessage);
-	destroyWindow(messageName);
 }

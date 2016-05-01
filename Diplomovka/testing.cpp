@@ -15,15 +15,11 @@ using namespace std;
 
 /** Global variables */
 
-const String windowName = "Feature detection demo (Press Esc to terminate)";
-const bool DEBUG_MODE = true;
-const int INPUT_TYPE = InputProcessing::INPUT_TYPE_GI4E_DB;
+const string windowName2 = "testWindow";
 
-void test() {
+void test(InputProcessing ip) {
 
 	unsigned long frameCount = 0; 
-	namedWindow(windowName, 1);
-	InputProcessing ip(INPUT_TYPE, DEBUG_MODE);
 	Mat frame, gray, red;
 
 	// stopwatch
@@ -63,11 +59,11 @@ void test() {
 		if (face.width == 0) {
 			if (waitKey(30) == 27)
 				break;
-			imshow(windowName, frame);
+			imshow(windowName2, frame);
 			csv << '\n';
 			continue;
 		}
-		if (DEBUG_MODE) {
+		if (ip.DEBUG_MODE) {
 			rectangle(frame, face, Scalar(45, 200, 200, 100));
 		}
 
@@ -83,7 +79,7 @@ void test() {
 		}
 
 
-		if (DEBUG_MODE) {
+		if (ip.DEBUG_MODE) {
 			rectangle(frame, leftEye, Scalar(45, 45, 200, 100));
 			rectangle(frame, rightEye, Scalar(200, 200, 45, 100));
 		}
@@ -145,7 +141,7 @@ void test() {
 		csv << err << ';';
 
 
-		imshow(windowName, frame);
+		imshow(windowName2, frame);
 		if (waitKey(1) == 27)
 			break;
 		csv << "\n";

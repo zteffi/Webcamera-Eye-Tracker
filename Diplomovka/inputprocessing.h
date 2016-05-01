@@ -8,12 +8,15 @@
 #include <time.h>
 #include <vector>
 
-#include <opencv2/opencv.hpp>
+#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/ml/ml.hpp"
 
 //need old school libs for neural network due to bad documentation of openCV 3.0
 
-#include <opencv/cv.h>
-#include <opencv/ml.h>
 
 
 
@@ -94,10 +97,10 @@ using namespace std;
 		/* returns minimal intensity in 4-neighbourhood as pupil center, used as a starting point for getEyeCenter */
 		Point getPupilPointFromIntensity(Mat ROI, double shrinkFactor);
 
-		/*saves feature positions + gaze coordinates into file
+		/*saves measure positions + gaze coordinates into file
 		returns true if features were found
 		*/
-		bool saveFeatures(ofstream & file, int x, int y, Size screenSize);
+		bool saveMeasures(ofstream & file, int x, int y, Size screenSize);
 
 		/*
 			returns features as vector. If fails, returns empty vector
@@ -112,9 +115,22 @@ using namespace std;
 		vector<Point> getFeatures(Mat gray);
 
 		/*
+			get measures feeded into NN which are
+			0) ratio of x- dist between center and eye corners - right eye (user)
+			1) left eye
+			2) ratio of y- dist from inner corner to  eye center and x-dist between corners- right eye
+			3) left eye
+			4) ratio of eucl. distances between eye corners right and left
+			5), 6) x, y coords of right inner corner
+			7), 8) x, y coords of left inner corner
+
+		*/
+		vector<double> getDerivativeFeatures(vector<Point> features, Size frameSize);
+
+		/*
 		writes predictions into outputfile. If succes, returns 0, otherwise -1
-		loadMatFromCSVFile(inputFile, Mat, 14, inputCout) returns 14 x inputCount matrix, last 2 cols are targets)
-		trackfile 12x trackcount matrix
+		loadMatFromCSVFile(inputFile, Mat, 11, inputCout) returns 11 x inputCount matrix, last 2 cols are targets)
+		trackfile 9x trackcount matrix
 		outputfile 2x trackcount matrix
 		*/
 		int processTrainingFile(const char * inputFile, int inputCount, const char  * trackFile, int trackCount, const char  * outputFile);
@@ -123,17 +139,6 @@ using namespace std;
 		return 0 if csv loaded to mat, -1 otherwise
 		*/
 		int loadMatFromCSVFile(const char* filename, Mat & mat, int numAttr, int numLines);
-
-		/* if input is live video stream, specifie camera number */
-		void setCamera(int deviceNum);
-
-		/* if input is a video file, set file */
-		void setVideo(string file);
-
-	private:
-		/* Finds center of a large area for getEyeCenter() */
-		Point getApproximateEyeCenter(Mat frame, Rect eye);
-
 
 
 

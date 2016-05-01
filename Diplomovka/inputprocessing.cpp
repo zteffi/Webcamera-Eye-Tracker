@@ -467,15 +467,13 @@ double getFunctionResponseForCenter(Mat gx, Mat gy, Point c) {
 }
 
 
-bool InputProcessing::saveFeatures(ofstream & file, int x, int y, Size screenSize) {
+bool InputProcessing::saveMeasures(ofstream & file, int x, int y, Size screenSize) {
 	
 	Mat frame = getNextFrame(frameCount++);
 	Mat gray;
 	
 	cvtColor(frame, gray, CV_BGR2GRAY);
-
-	//locate face
-	
+		
 	vector<Point> features = getFeatures(gray);
 	if (features.size() != 6)
 		return false;
@@ -490,13 +488,25 @@ bool InputProcessing::saveFeatures(ofstream & file, int x, int y, Size screenSiz
 		
 		imshow(WINDOW_NAME, frame);
 	}
+	vector<double> derf = getDerivativeFeatures(features, gray.size());
+
+	if (derf[0] < 0 || derf[0] > 5) {
+		return false;
+	}
+
+	if (derf[1] < 0 || derf[1] > 5) {
+		return false;
+	}
 	
-	file << features[0].x / (double)gray.cols << ' ' << features[0].y / (double)gray.rows << ' '
-		<< features[1].x / (double)gray.cols << ' ' << features[1].y / (double)gray.rows << ' '
-		<< features[2].x / (double)gray.cols << ' ' << features[2].y / (double)gray.rows << ' '
-		<< features[3].x / (double)gray.cols << ' ' << features[3].y / (double)gray.rows << ' '
-		<< features[4].x / (double)gray.cols << ' ' << features[4].y / (double)gray.rows << ' '
-		<< features[5].x / (double)gray.cols << ' ' << features[5].y / (double)gray.rows << ' '
+	file << derf[0] << ' '
+		<< derf[1] << ' '
+		<< derf[2] << ' '
+		<< derf[3] << ' '
+		<< derf[4] << ' '
+		<< derf[5] << ' '
+		<< derf[6] << ' '
+		<< derf[7] << ' '
+		<< derf[8] << ' '
 		<< x / (double) screenSize.width << ' '
 		<< y / (double) screenSize.height
 		<< endl;
@@ -538,14 +548,39 @@ vector<Point> InputProcessing::getFeatures(Mat gray) {
 		features.clear();
 	}
 
+
 	return features;
+}
+
+vector<double> InputProcessing::getDerivativeFeatures(vector<Point> features, Size frameSize) {
+	/*
+		0) ratio of x- dist between center and eye corners - right eye (user)
+		1) left eye
+		2) ratio of y- dist from inner corner to  eye center and x-dist between corners- right eye
+		3) left eye
+		4) ratio of distances between eye corners right and left
+		5), 6) x, y coords of right inner corner
+		7), 8) x, y coords of left inner corner
+	*/
+	vector<double> res(9);
+	res[0] = (features[2].x - features[1].x) / (double)(features[1].x - features[0].x);
+	res[1] = (features[4].x - features[3].x) / (double)(features[5].x - features[4].x);
+	res[2] = (features[2].y - features[1].y) / (double)(features[2].x - features[0].x);
+	res[3] = (features[3].y - features[4].y) / (double)(features[5].x - features[3].x);
+	//norm(Mat(p1) - Mat(p2) is euclidian distance between points p1 and p2
+	res[4] = norm(Mat(features[2]) - Mat(features[0])) / (double)norm(Mat(features[5]) - Mat(features[3]));
+	res[5] = features[2].x / (double)frameSize.width;
+	res[6] = features[2].y / (double)frameSize.height;
+	res[7] = features[4].x / (double)frameSize.width;
+	res[8] = features[4].y / (double)frameSize.height;
+	return res;
 }
 
 int InputProcessing:: processTrainingFile(const char * inputFile, int inputCount, const char  * trackFile, int trackCount, const char  * outputFile) {
 	
-	int num_input = 12;
+	int num_input = 9;
 	int num_hidden = 30;
-	int nun_hidden_2 = 12;
+	int num_hidden_2 = 6;
 	int num_output = 2;
 
 	
@@ -553,11 +588,12 @@ int InputProcessing:: processTrainingFile(const char * inputFile, int inputCount
 	const unsigned int max_epochs = 50000;
 	const unsigned int epochs_between_reports = 1000;
 
-	Mat layerSizes(3,1,CV_16S);
+	Mat layerSizes(4,1,CV_16S);
 	short * ptr = layerSizes.ptr<short>();
 	ptr[0] = num_input;
     ptr[1] = num_hidden;
-	ptr[2] = num_output;
+	ptr[2] = num_hidden_2;
+	ptr[3] = num_output;
 
 
 	Ptr<ml::ANN_MLP> mlp = ml::ANN_MLP::create();
@@ -565,29 +601,32 @@ int InputProcessing:: processTrainingFile(const char * inputFile, int inputCount
 	mlp->setLayerSizes(layerSizes);
 	mlp->setActivationFunction(cv::ml::ANN_MLP::SIGMOID_SYM);
 	//mlp->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS, 10000, .02));
-
-	Mat_<float> train(inputCount, 14, CV_32F);
-	int t = loadMatFromCSVFile(inputFile, train, 14, inputCount);
+	cout << mlp->getLayerSizes() ;
+	Mat_<float> train(inputCount, 11, CV_32F);
+	int t = loadMatFromCSVFile(inputFile, train, 11, inputCount);
 	if (t < 0) {
 		return t;
 	}
-	Mat inputs = train.colRange(0, 12);
+	Mat inputs = train.colRange(0, 9);
 	Mat targets(inputCount, 2, CV_32F); 
 
 	//not sure why this is necessary, but targets = train.colRange(12,14) is not accepted by ANN_MLP::train()
-	Mat targets2 = train.colRange(12, 14);
+	Mat targets2 = train.colRange(9, 11);
 	MatIterator_<float> it = targets.begin<float>();
 	MatIterator_<float> it2 = targets2.begin<float>();
 	for (; it != targets.end<float>(); it++, it2++) {
 		(*it) = (*it2);
 	}
+	cout << inputs.rows << " " << inputs.cols - num_input;
+
+	cout << targets.rows << " " << targets.cols - num_output;
 	if (!mlp->train(inputs, ml::ROW_SAMPLE, targets)) {
 		return -2;
 	}
 	//!TODO
-	Mat track(trackCount, 14, CV_32F);
-	t = loadMatFromCSVFile(trackFile, track, 14, trackCount);
-	Mat samples = track.colRange(0, 12);
+	Mat track(trackCount, 11, CV_32F);
+	t = loadMatFromCSVFile(trackFile, track, 11, trackCount);
+	Mat samples = track.colRange(0, 9);
 	Mat out;
 	mlp->predict(samples, out);
 	ofstream f;
@@ -622,18 +661,5 @@ int InputProcessing::loadMatFromCSVFile(const char* filename, Mat & mat, int num
 	return 0;
 }
 
-/* if input is live video stream, specifie camera number */
-void InputProcessing::setCamera(int deviceNum) {
-
-}
-
-/* if input is a video file, set file */
-void InputProcessing::setVideo(string file) {
-
-}
-
-Point InputProcessing::getApproximateEyeCenter(Mat frame, Rect eye) {
-	return Point(-1, -1);
-}
 
 

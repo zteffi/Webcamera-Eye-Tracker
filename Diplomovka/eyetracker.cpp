@@ -22,13 +22,15 @@ vector<Point2i> corners;
 
 int main(int, char) {
 	
-
 	unsigned long frameCount = 0;
 	namedWindow(windowName, 1);
 	InputProcessing ip(INPUT_TYPE, DEBUG_MODE);
 
-	//ip.processTrainingFile("data/training-martin.data", 240, "data/testing-martin.data",  48, "data/output-martin-30.csv");
+	Mat m(48, 11, CV_32F);
+	ip.loadMatFromCSVFile("data/meas-testing-martin.data", m, 11, 48);
 
+	ip.processTrainingFile("data/meas-training-martin.data", 240, "data/meas-testing-martin.data",  48, "data/meas-output-martin-30-6.csv");
+	
 	Mat frame, gray, prevRed, red;
 	
 
@@ -46,7 +48,6 @@ int main(int, char) {
 	}
 	destroyWindow(windowName);
 	trainingPhase(ip, getScreenRes());
-	//ip.processTrainingFile("train_bak.data");
 	// the camera will be deinitialized automatically in VideoCapture destructor
 
 	//videos of screen and user face will be captured
