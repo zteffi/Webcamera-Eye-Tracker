@@ -111,12 +111,18 @@ using namespace std;
 		*/
 		vector<Point> getFeatures(Mat gray);
 
-		void processTrainingFile(const char * filename);
+		/*
+		writes predictions into outputfile. If succes, returns 0, otherwise -1
+		loadMatFromCSVFile(inputFile, Mat, 14, inputCout) returns 14 x inputCount matrix, last 2 cols are targets)
+		trackfile 12x trackcount matrix
+		outputfile 2x trackcount matrix
+		*/
+		int processTrainingFile(const char * inputFile, int inputCount, const char  * trackFile, int trackCount, const char  * outputFile);
 
 		/*
 		return 0 if csv loaded to mat, -1 otherwise
 		*/
-		int loadMatFromCSVFile(const char* filename, Mat_<float> & mat, int numAttr, int numLines);
+		int loadMatFromCSVFile(const char* filename, Mat & mat, int numAttr, int numLines);
 
 		/* if input is live video stream, specifie camera number */
 		void setCamera(int deviceNum);

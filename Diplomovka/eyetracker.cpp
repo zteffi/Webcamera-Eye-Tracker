@@ -26,13 +26,13 @@ int main(int, char) {
 	unsigned long frameCount = 0;
 	namedWindow(windowName, 1);
 	InputProcessing ip(INPUT_TYPE, DEBUG_MODE);
-	Mat_<float> m(240,14);
-	ip.loadMatFromCSVFile("data/training-martin.data", m, 14, 240);
+
+	//ip.processTrainingFile("data/training-martin.data", 240, "data/testing-martin.data",  48, "data/output-martin-30.csv");
 
 	Mat frame, gray, prevRed, red;
 	
 
-	//show user for 1 second
+	//show user until enter is pressed
 	while  (true) {
 		frame = ip.getNextFrame(0);
 		imshow(windowName, frame);

@@ -409,7 +409,6 @@ Point getPupilPointFromGradient(Mat gx) {
 	Point2i minP(0, 0);
 	double * v;
 	for (int i = 0; i < gx.rows; i++) {
-		//TODO skim search space
 		v = gx.ptr<double>(i);
 		for (int j = 0; j < gx.cols; j++) {
 			if (v[j] > maxVal) {
@@ -542,26 +541,71 @@ vector<Point> InputProcessing::getFeatures(Mat gray) {
 	return features;
 }
 
-void InputProcessing::processTrainingFile(const char * filename) {
+int InputProcessing:: processTrainingFile(const char * inputFile, int inputCount, const char  * trackFile, int trackCount, const char  * outputFile) {
 	
 	int num_input = 12;
+	int num_hidden = 30;
+	int nun_hidden_2 = 12;
 	int num_output = 2;
-	int num_layers = 3;
-	int num_neurons_hidden = 30;
+
+	
 	const double desired_error = (const double) .05;
 	const unsigned int max_epochs = 50000;
 	const unsigned int epochs_between_reports = 1000;
 
-	vector<int> layerSizes = { num_input, num_neurons_hidden, num_output};
-	Ptr<ml::ANN_MLP> nnPtr = ml::ANN_MLP::create();
-	nnPtr->setLayerSizes(layerSizes);
-	
+	Mat layerSizes(3,1,CV_16S);
+	short * ptr = layerSizes.ptr<short>();
+	ptr[0] = num_input;
+    ptr[1] = num_hidden;
+	ptr[2] = num_output;
 
+
+	Ptr<ml::ANN_MLP> mlp = ml::ANN_MLP::create();
+	
+	mlp->setLayerSizes(layerSizes);
+	mlp->setActivationFunction(cv::ml::ANN_MLP::SIGMOID_SYM);
+	//mlp->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS, 10000, .02));
+
+	Mat_<float> train(inputCount, 14, CV_32F);
+	int t = loadMatFromCSVFile(inputFile, train, 14, inputCount);
+	if (t < 0) {
+		return t;
+	}
+	Mat inputs = train.colRange(0, 12);
+	Mat targets(inputCount, 2, CV_32F); 
+
+	//not sure why this is necessary, but targets = train.colRange(12,14) is not accepted by ANN_MLP::train()
+	Mat targets2 = train.colRange(12, 14);
+	MatIterator_<float> it = targets.begin<float>();
+	MatIterator_<float> it2 = targets2.begin<float>();
+	for (; it != targets.end<float>(); it++, it2++) {
+		(*it) = (*it2);
+	}
+	if (!mlp->train(inputs, ml::ROW_SAMPLE, targets)) {
+		return -2;
+	}
+	//!TODO
+	Mat track(trackCount, 14, CV_32F);
+	t = loadMatFromCSVFile(trackFile, track, 14, trackCount);
+	Mat samples = track.colRange(0, 12);
+	Mat out;
+	mlp->predict(samples, out);
+	ofstream f;
+	f.open(outputFile);
+	it = out.begin<float>();
+	while (it != out.end<float>()) {
+		f << (*it) << " ";
+		it++;
+		f << (*it) << endl;
+		it++;
+	}
+	f.close();
+	return 0;
 
 	
 }
 
-int InputProcessing::loadMatFromCSVFile(const char* filename, Mat_<float> & mat, int numAttr, int numLines) {
+int InputProcessing::loadMatFromCSVFile(const char* filename, Mat & mat, int numAttr, int numLines) {
 	FILE * f = fopen(filename, "r");
 	if (!f) {
 		printf("ERROR: cannot read file %s\n", filename);
@@ -570,7 +614,7 @@ int InputProcessing::loadMatFromCSVFile(const char* filename, Mat_<float> & mat,
 
 	MatIterator_<float> it, end;
 	
-	for (it = mat.begin(), end = mat.end(); it != end; ++it) {
+	for (it = mat.begin<float>(), end = mat.end<float>(); it != end; ++it) {
 		float d;
 		fscanf(f, "%f,", &d);
 		(*it) = d;
