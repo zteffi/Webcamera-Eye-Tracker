@@ -1,7 +1,7 @@
 #pragma once
 #include <windows.h> //for GetTickCount 
 
-#include "training.h"
+#include "training_phase.h"
 #include "tracking_phase.h"
 #include "inputprocessing.h"
 
@@ -21,17 +21,13 @@ vector<Point2i> corners;
 
 
 int main(int, char) {
-	
 	unsigned long frameCount = 0;
 	namedWindow(windowName, 1);
 	InputProcessing ip(INPUT_TYPE, DEBUG_MODE);
 
-	Mat m(48, 11, CV_32F);
-	ip.loadMatFromCSVFile("data/meas-testing-martin.data", m, 11, 48);
+	printf("waiting for Enter...\n");
 
-	ip.processTrainingFile("data/meas-training-martin.data", 240, "data/meas-testing-martin.data",  48, "data/meas-output-martin-30-6.csv");
-	
-	Mat frame, gray, prevRed, red;
+	Mat frame;
 	
 
 	//show user until enter is pressed
@@ -47,12 +43,21 @@ int main(int, char) {
 			break;
 	}
 	destroyWindow(windowName);
-	trainingPhase(ip, getScreenRes());
+	
 	// the camera will be deinitialized automatically in VideoCapture destructor
-
 	//videos of screen and user face will be captured
-	//captureVids(ip);
 
+	const char * trainingFile = "data/train.data";
+	const char * trackFile = "data/features.data";
+	const char * outputFile = "output/output.data";
+	const char * trackingFolder = "output";
+	const float scaleFactor = .5;
+	trainingPhase(ip, getScreenRes(), trainingFile);
+	long captureCount = captureVids(ip, trackingFolder, scaleFactor);
+	printf("processing webcam images (%d)...\n", captureCount);
+	processTrackingData(ip, trackingFolder, captureCount, trackFile);
+	printf("estimating gaze points...\n");
+	processOutput(ip, getTrainingCount(), trainingFile, captureCount, trackFile, outputFile, trackingFolder, getScreenRes(scaleFactor));
 	return 0;
 }
 

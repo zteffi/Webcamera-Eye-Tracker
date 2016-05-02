@@ -84,7 +84,7 @@ InputProcessing::InputProcessing(int inputType, bool DEBUG_MODE) :
 
 }
 /* formats n as string of length len with leading zeroes  */
-string formatedStrToInt(unsigned int n, unsigned int len) {
+string InputProcessing::formatedIntToStr(unsigned long n, unsigned int len) {
 	string res(len, '0');
 	for (string::reverse_iterator i = res.rbegin(); i != res.rend(); i++) {
 		*i = n % 10 + '0';
@@ -92,6 +92,9 @@ string formatedStrToInt(unsigned int n, unsigned int len) {
 	}
 	return res;
 }
+
+
+
 
 Mat InputProcessing::getNextFrame(unsigned long frameNum) {
 	Mat frame;
@@ -116,8 +119,8 @@ Mat InputProcessing::getNextFrame(unsigned long frameNum) {
 		// when we used all photos in db, return empty matrix
 		if (personCount <= 103) {
 			string filename;
-			filename = formatedStrToInt(personCount, 3) + "_" +
-				formatedStrToInt(frameCount, 2) + ".png";
+			filename = formatedIntToStr(personCount, 3) + "_" +
+				formatedIntToStr(frameCount, 2) + ".png";
 			frame = imread("../GI4E/images/" + filename);
 		}
 		break;
@@ -467,7 +470,7 @@ double getFunctionResponseForCenter(Mat gx, Mat gy, Point c) {
 }
 
 
-bool InputProcessing::saveMeasures(ofstream & file, int x, int y, Size screenSize) {
+bool InputProcessing::saveDerivativeFeatures(ofstream & file, int x, int y, Size screenSize) {
 	
 	Mat frame = getNextFrame(frameCount++);
 	Mat gray;
@@ -576,73 +579,7 @@ vector<double> InputProcessing::getDerivativeFeatures(vector<Point> features, Si
 	return res;
 }
 
-int InputProcessing:: processTrainingFile(const char * inputFile, int inputCount, const char  * trackFile, int trackCount, const char  * outputFile) {
-	
-	int num_input = 9;
-	int num_hidden = 30;
-	int num_hidden_2 = 6;
-	int num_output = 2;
 
-	
-	const double desired_error = (const double) .05;
-	const unsigned int max_epochs = 50000;
-	const unsigned int epochs_between_reports = 1000;
-
-	Mat layerSizes(4,1,CV_16S);
-	short * ptr = layerSizes.ptr<short>();
-	ptr[0] = num_input;
-    ptr[1] = num_hidden;
-	ptr[2] = num_hidden_2;
-	ptr[3] = num_output;
-
-
-	Ptr<ml::ANN_MLP> mlp = ml::ANN_MLP::create();
-	
-	mlp->setLayerSizes(layerSizes);
-	mlp->setActivationFunction(cv::ml::ANN_MLP::SIGMOID_SYM);
-	//mlp->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS, 10000, .02));
-	cout << mlp->getLayerSizes() ;
-	Mat_<float> train(inputCount, 11, CV_32F);
-	int t = loadMatFromCSVFile(inputFile, train, 11, inputCount);
-	if (t < 0) {
-		return t;
-	}
-	Mat inputs = train.colRange(0, 9);
-	Mat targets(inputCount, 2, CV_32F); 
-
-	//not sure why this is necessary, but targets = train.colRange(12,14) is not accepted by ANN_MLP::train()
-	Mat targets2 = train.colRange(9, 11);
-	MatIterator_<float> it = targets.begin<float>();
-	MatIterator_<float> it2 = targets2.begin<float>();
-	for (; it != targets.end<float>(); it++, it2++) {
-		(*it) = (*it2);
-	}
-	cout << inputs.rows << " " << inputs.cols - num_input;
-
-	cout << targets.rows << " " << targets.cols - num_output;
-	if (!mlp->train(inputs, ml::ROW_SAMPLE, targets)) {
-		return -2;
-	}
-	//!TODO
-	Mat track(trackCount, 11, CV_32F);
-	t = loadMatFromCSVFile(trackFile, track, 11, trackCount);
-	Mat samples = track.colRange(0, 9);
-	Mat out;
-	mlp->predict(samples, out);
-	ofstream f;
-	f.open(outputFile);
-	it = out.begin<float>();
-	while (it != out.end<float>()) {
-		f << (*it) << " ";
-		it++;
-		f << (*it) << endl;
-		it++;
-	}
-	f.close();
-	return 0;
-
-	
-}
 
 int InputProcessing::loadMatFromCSVFile(const char* filename, Mat & mat, int numAttr, int numLines) {
 	FILE * f = fopen(filename, "r");

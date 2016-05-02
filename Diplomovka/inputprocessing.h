@@ -61,6 +61,9 @@ using namespace std;
 		/* returns next frame of for input type selected in constructor */
 		Mat getNextFrame(unsigned long frameNum);
 
+		/* formats n as string of length len with leading zeroes  */
+		string formatedIntToStr(unsigned long n, unsigned int len);
+
 		/* returns red channel of image, if input is rgb */
 		Mat getRedChannelMatrix(const Mat frame);
 
@@ -97,10 +100,10 @@ using namespace std;
 		/* returns minimal intensity in 4-neighbourhood as pupil center, used as a starting point for getEyeCenter */
 		Point getPupilPointFromIntensity(Mat ROI, double shrinkFactor);
 
-		/*saves measure positions + gaze coordinates into file
+		/*saves df positions + gaze coordinates into file
 		returns true if features were found
 		*/
-		bool saveMeasures(ofstream & file, int x, int y, Size screenSize);
+		bool saveDerivativeFeatures(ofstream & file, int x, int y, Size screenSize);
 
 		/*
 			returns features as vector. If fails, returns empty vector
@@ -127,13 +130,7 @@ using namespace std;
 		*/
 		vector<double> getDerivativeFeatures(vector<Point> features, Size frameSize);
 
-		/*
-		writes predictions into outputfile. If succes, returns 0, otherwise -1
-		loadMatFromCSVFile(inputFile, Mat, 11, inputCout) returns 11 x inputCount matrix, last 2 cols are targets)
-		trackfile 9x trackcount matrix
-		outputfile 2x trackcount matrix
-		*/
-		int processTrainingFile(const char * inputFile, int inputCount, const char  * trackFile, int trackCount, const char  * outputFile);
+		
 
 		/*
 		return 0 if csv loaded to mat, -1 otherwise

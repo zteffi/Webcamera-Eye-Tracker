@@ -13,7 +13,7 @@
   <ItemGroup>
     <ClInclude Include="inputprocessing.h" />
     <ClInclude Include="tracking_phase.h" />
-    <ClInclude Include="training.h" />
+    <ClInclude Include="training_phase.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Diplomovka.rc" />
@@ -23,7 +23,7 @@
     <ClCompile Include="inputprocessing.cpp" />
     <ClCompile Include="testing.cpp" />
     <ClCompile Include="tracking_phase.cpp" />
-    <ClCompile Include="training.cpp" />
+    <ClCompile Include="training_phase.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{FD539F90-8A82-45B6-852F-AEFE536C88FE}</ProjectGuid>

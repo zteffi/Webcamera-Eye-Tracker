@@ -9,8 +9,9 @@ const String WINDOW_NAME = "testingWindow";
 
 // actual number of rows will be POINT_ROWS + 1, same with POINT_COLS,
 // to show points on bottom and  right sides
-const int POINT_ROWS  = 3;
-const int POINT_COLS = 4;
-const int FRAME_COUNT = 12;
+const int TRAINING_POINT_ROWS  = 3;
+const int TRAINING_POINT_COLS = 4;
+const int TRAINING_FRAME_COUNT = 12;
 
-void trainingPhase(InputProcessing ip, Size screenResolution);
+void trainingPhase(InputProcessing ip, Size screenResolution, const char * trainingFile);
+int getTrainingCount();
