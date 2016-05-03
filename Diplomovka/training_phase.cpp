@@ -44,7 +44,7 @@ void cleanTarget(Mat dst, Point loc) {
 
 
 
-void trainingPhase(InputProcessing ip, Size screenResolution, const char * trainingFile) {
+bool trainingPhase(InputProcessing ip, Size screenResolution, const char * trainingFile) {
 	Mat bg(screenResolution, CV_8UC(3), Scalar((char)30,30,30));
 	cv::namedWindow(WINDOW_NAME, CV_WINDOW_NORMAL);
 	setWindowProperty(WINDOW_NAME, CV_WND_PROP_FULLSCREEN, CV_WINDOW_FULLSCREEN);
@@ -74,7 +74,9 @@ void trainingPhase(InputProcessing ip, Size screenResolution, const char * train
 				}
 				//user can cancel program
 				if (waitKey(20) == 27) {
-					exit(0);
+					file.close();
+					destroyAllWindows();
+					return  false;
 				}
 			}
 
@@ -84,6 +86,7 @@ void trainingPhase(InputProcessing ip, Size screenResolution, const char * train
 	}
 	file.close();
 	destroyAllWindows();
+	return true;
 }
 
 

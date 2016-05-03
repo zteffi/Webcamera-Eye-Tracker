@@ -52,7 +52,11 @@ int main(int, char) {
 	const char * outputFile = "output/output.data";
 	const char * trackingFolder = "output";
 	const float scaleFactor = .5;
-	trainingPhase(ip, getScreenRes(), trainingFile);
+	
+	bool completed = trainingPhase(ip, getScreenRes(), trainingFile);
+	if (!completed)
+		return 0;
+		
 	long captureCount = captureVids(ip, trackingFolder, scaleFactor);
 	printf("processing webcam images (%d)...\n", captureCount);
 	processTrackingData(ip, trackingFolder, captureCount, trackFile);

@@ -89,7 +89,7 @@ long captureVids(InputProcessing ip, string folderName, float scaleFactor) {
 	Mat cameraFrame;
 	// go until user stops or integer overflows
 	long i = 1;
-	for (; i > 0; i++){
+	for (; i < 999999; i++){
 		screenFrame = hwnd2mat(hDesktopWnd, scaleFactor);
 		cvtColor(screenFrame, screenFrame3C, CV_BGRA2BGR);
 		cameraFrame = ip.getNextFrame(0);

@@ -13,5 +13,5 @@ const int TRAINING_POINT_ROWS  = 3;
 const int TRAINING_POINT_COLS = 4;
 const int TRAINING_FRAME_COUNT = 12;
 
-void trainingPhase(InputProcessing ip, Size screenResolution, const char * trainingFile);
+bool trainingPhase(InputProcessing ip, Size screenResolution, const char * trainingFile);
 int getTrainingCount();
