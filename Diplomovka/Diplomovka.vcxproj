@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inputprocessing.h" />
+    <ClInclude Include="testing.h" />
     <ClInclude Include="tracking_phase.h" />
     <ClInclude Include="training_phase.h" />
   </ItemGroup>

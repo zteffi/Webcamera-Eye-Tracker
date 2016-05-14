@@ -1,23 +1,9 @@
-#pragma once
-#include <opencv2/opencv.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/features2d.hpp>
-#include <windows.h> //for GetTickCount 
-#include <iostream>
-#include <stdio.h>
-#include <string>
-
-#include "inputprocessing.h"
-
-using namespace cv;
-using namespace std;
-
+#include "testing.h"
 /** Global variables */
 
 const string windowName2 = "testWindow";
 
-void test(InputProcessing ip) {
+void testFeatures(InputProcessing ip) {
 
 	unsigned long frameCount = 0; 
 	Mat frame, gray, red;
