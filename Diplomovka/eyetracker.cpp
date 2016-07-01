@@ -5,6 +5,7 @@
 #include "tracking_phase.h"
 #include "inputprocessing.h"
 
+#include "testing.h"
 
 using namespace cv;
 using namespace std;
@@ -13,7 +14,7 @@ using namespace std;
 
 const String windowName = "Press \"Enter\" to start training phase ";
 const bool DEBUG_MODE = false;
-const int INPUT_TYPE = InputProcessing::INPUT_TYPE_CAMERA_INPUT;
+const int INPUT_TYPE = InputProcessing::INPUT_TYPE_GI4E_DB;
 
 // sorted from min x to max x coord:
 // (rightEyeOuterCorner, rightEyeInnerCorner, leftEyeInnerCorner, leftEyeOuterCorner)
@@ -25,12 +26,14 @@ int main(int, char) {
 	namedWindow(windowName, 1);
 	InputProcessing ip(INPUT_TYPE, DEBUG_MODE);
 
+	testFeatures(ip);
+
 	printf("waiting for Enter...\n");
 
 	Mat frame;
 	
 
-	//show user until enter is pressed
+	//show user's face until enter is pressed
 	while  (true) {
 		frame = ip.getNextFrame(0);
 		imshow(windowName, frame);

@@ -2,7 +2,16 @@
 
 #include "inputprocessing.h"
 
+/*
+	returns screen resolution scaled by the scaleFactor (scaleFactor = .5 means screen capture image
+	will be 1/2 width and 1/2 height of the screen resolution) 
+*/
 Size getScreenRes(float scaleFactor = 1);
+
+/*
+	transforms windows' window handle to a Mat object
+	source: http://stackoverflow.com/a/14167433/2962048
+*/
 Mat  hwnd2mat(HWND hwnd, float scaleFactor);
 /*
 captures both screen and webcam input
