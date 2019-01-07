@@ -14,7 +14,7 @@ using namespace std;
 
 const String windowName = "Press \"Enter\" to start training phase ";
 const bool DEBUG_MODE = false;
-const int INPUT_TYPE = InputProcessing::INPUT_TYPE_GI4E_DB;
+const int INPUT_TYPE = InputProcessing::INPUT_TYPE_CAMERA_INPUT;
 
 // sorted from min x to max x coord:
 // (rightEyeOuterCorner, rightEyeInnerCorner, leftEyeInnerCorner, leftEyeOuterCorner)
